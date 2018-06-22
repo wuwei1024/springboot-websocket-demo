@@ -26,12 +26,20 @@
 			if(typeof event.data == 'string'){//文本信息
 				setMessage("服务器消息：" + event.data);
 			} else {//二进制信息，图片/语音/视频等
-				
-			}  
+				var reader = new FileReader();  
+				reader.onload = function(eve){ 
+					if(eve.target.readyState == FileReader.DONE){  
+                    				var img = document.createElement("img");
+						img.src = this.result;  
+						document.getElementById("message").appendChild(img);
+					}  
+                		};  
+				reader.readAsDataURL(event.data);
+			}
 		}
 	
 		//关闭WebSocket
-		websocket.onclose = function(event){ 
+		websocket.onclose = function(event){
 		   setMessage("WebSocket连接关闭！");
 		}
 		
@@ -42,13 +50,34 @@
 		
 		//发送文本消息到服务器
 		function sendMsg(){
-			if (websocket.readyState == 1) { //0-CONNECTING;1-OPEN;2-CLOSING;3-CLOSED  
-			var msg = document.getElementById('text').value;
-		    	if(msg){  
-				websocket.send(msg);
-		    	}
-            		document.getElementById("text").value= "";
-			document.getElementById('text').focus();
+			if (websocket.readyState == 1){ //0-CONNECTING;1-OPEN;2-CLOSING;3-CLOSED  
+				var msg = document.getElementById('text').value;
+				if(msg)	websocket.send(msg);
+				document.getElementById("text").value= "";
+				document.getElementById('text').focus();
+			} else {    
+				alert("websocket connection closed!");
+			}    
+		}
+		
+		//发送图片消息到服务器(注：图片只能10k左右，太大会失败)
+		function sendPic(){
+			if (websocket.readyState == 1){ //0-CONNECTING;1-OPEN;2-CLOSING;3-CLOSED  
+				var inputElement = document.getElementById("file");
+				var fileList = inputElement.files;
+				for ( var i = 0; i < fileList.length; i++) {
+					//发送文件名
+					websocket.send(fileList[i].name);
+		　　　　　　		   var reader = new FileReader();
+					//以二进制形式读取文件
+					reader.readAsArrayBuffer(fileList[i]);
+					//文件读取完毕后该函数响应
+					reader.onload = function loaded(event) {
+						var binaryString = event.target.result;
+						//发送二进制字符串数组
+						websocket.send(binaryString);
+					}
+				}
 			} else {    
 				alert("websocket connection closed!");
 			}    
@@ -80,7 +109,9 @@
 		<input id="text" type="text"/>
 		<button onclick="sendMsg()">发送消息</button>
 		<button onclick="clearMsg()">清空消息</button>
-		<button onclick="closeWebSocket()">关闭 WebSocket</button>
+		<button onclick="closeWebSocket()">关闭 WebSocket</button><br/>
+		<input id="file" type="file" multiple />
+		<button onclick="sendPic()">发送图片</button>
 		<div id="message"></div>
    </body>
 </html>
