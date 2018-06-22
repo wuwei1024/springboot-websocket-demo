@@ -2,13 +2,14 @@ package demo.websocket;
 
 import org.springframework.stereotype.Component;
 
-import javax.websocket.*;
-import javax.websocket.server.ServerEndpoint;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.websocket.*;
+import javax.websocket.server.ServerEndpoint;
 
 /**
  * @author wuwei
@@ -29,7 +30,7 @@ public class MyWebSocket {
         sendMsg(session, "连接服务器成功！");
     }
 
-    //接收客户端消息
+    //接收客户端文本消息
     @OnMessage
     public void onMessage(String message, Session session) {
         //转发消息给其它所有客户端
@@ -39,6 +40,22 @@ public class MyWebSocket {
             }
         }
         logger.log(Level.INFO, "客户端发送消息：" + message);
+    }
+    
+    //接收客户端图片消息
+    @OnMessage
+    public void onMessage(byte[] message, Session session) {
+        if (message == null || message.length == 0) return;
+        //给所有其它websocket客户端下发消息
+        for (Session s : list) {
+            if (s != session) {
+                try {
+                    s.getBasicRemote().sendBinary(ByteBuffer.wrap(message));
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, e.getMessage());
+                }
+            }
+        }
     }
     
     //关闭
